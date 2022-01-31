@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="Viz" content="width=device-width, initial-scale=1.0">
+    <title>Viz</title>
+    <link rel="stylesheet" href="css/main.css"
+</head>
+
+<body>
+    <div class="scroll" id="scroller">
+    </div>
+
+    <div class="topnav">
+        &nbsp;  &nbsp;  <input type="text" width="100%" height="50px" box-sizing="border-box" display="block" name="filter" placeholder="Filter By Hashtag..">
+    </div>
+    <div class="datenav">
+        Start Date:
+        <input type="date" id="start" name="date-start"
+        value="2019-05-11"
+        min="2019-05-11" max="2019-11-01">
+        End Date:&nbsp; 
+        <input type="date" id="start" name="date-end"
+        value="2019-11-01"
+        min="2019-05-11" max="2019-11-01">
+    </div>
+    <div class="sentimentRange">
+        Min Sentiment:
+        <input id="number" type="number" name="MinSent" value="0.0" min="0.0" max="1.0" step="0.05">
+        Max Sentiment:  &nbsp; 
+        <input id="number" type="number" name="MaxSent" value="1.0"min="0.0" max="1.0" step="0.05">
+    </div>
+
+    <div class="resetButton">
+        &nbsp;  &nbsp;  &nbsp;  &nbsp;  &nbsp;  &nbsp;  <button type="button" width="100%" box-sizing="border-box" display="block" name="reset" >Reset Filters</button>
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js'></script>
+    <div class="plots">
+        <canvas id="chart1" width="125px" height="125px"></canvas>
+        <canvas id="chart2" width="125px" height="125px"></canvas>
+    </div>
+
+
+    <script src="./node_modules/three/build/three.js"></script>
+    <script type="text/javascript" src="d3.v2.js"></script>
+    <script type="text/javascript" src="d3-threeD.js"></script>
+    <script type="text/javascript" src="jquery-1.7.2.js"></script>
+    <script type="text/javascript" src="geo_util.js"></script>
+    <script src="http://gamingJS.com/Tween.js"></script>
+    <script src="https://code.createjs.com/1.0.0/tweenjs.min.js"></script>
+    <script>
+    </script>
+
+    <script type="module">
+    import { FlyControls } from './node_modules/three/examples/jsm/controls/FlyControls.js';
+    import { EffectComposer } from './node_modules/three/examples/jsm/postprocessing/EffectComposer.js';
+    import { RenderPass } from './node_modules/three/examples/jsm/postprocessing/RenderPass.js';
+    import { MapControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
+    import { OutlinePass } from './node_modules/three/examples/jsm/postprocessing/OutlinePass.js';
+    import { GUI } from './node_modules/three/examples/jsm/libs/dat.gui.module.js';
+
+
+    // get the correct geo for d3s
+    geo.setupGeo();
+    var translate = geo.mercator.translate();
+
+    // get the data
+    jQuery.getJSON('data/dummy/real.json', function(data, textStatus, jqXHR) {
+        var WIDTH = window.innerWidth, HEIGHT = window.innerHeight;  
+        print("Width=");
+        print(WIDTH);
+        print("Height=");
+        print(HEIGHT);
+        var scene;
+        var renderer;
+        var camera;
+        var controls;
+        var composer, outlinePass, permanentOutlinePass; 
+        var directLight;   
+        var gui;    
+        var clock = new THREE.Clock();
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+        var selectedObjects = [];
+        var allObjects = [];
+        var selectedCount = 0;
+        var selectedObjects = [];
+        var dateList = [];
+        var totalNames = [];
+        var currentDate = 0;
+        var totalMessages =[]
+        var currentNetwork = []
+    
+
+       // Initiating Tooltips
+        let tooltip_state = { display: "none" }
+        let tooltip_template = document.createRange().createContextualFragment(`<div id="tooltip" style="display: none;
+         position: absolute; pointer-events: none;
+        font-size: 13px; width: 200px; text-align: center;
+        line-height: 1; padding: 6px;
+        background: rgba(239,27,30,0.95); font-family: monospace; border-radius:25px; 
+        color: rgba(59, 31, 43); text-shadow: 1px 1px 1px #000000;" >
+            <div id="point_tip" style="padding: 4px; margin-bottom: 4px; font-weight: 900;border:2px solid black;
+             font-size: x-large; background: rgba(95,117,142,1);border-radius:15px;"></div>
+            <div id="group_tip" style="padding: 4px;"></div>
+                <table id="pointerTable" style="background-color:rgba(219, 223, 172, 1);">          
+
+                <tr>
+                    <td>
+                        Message:
+                    </td>
+                    <td id="median_sentiment">
+                    hi
+                    </td> 
+                </tr>
+                <tr>
+                    <td>
+                        Hashtags:
+                    </td>
+                    <td id="htags">
+                    hi
+                    </td> 
+                </tr>
+                <tr>
+                    <td>
+                        Date:
+                    </td>
+                    <td id="date">
+                    hi
+                    </td> 
+                </tr>
+                <tr>
+                    <td>
+                        State:
+                    </td>
+                    <td id="mean_sentiment">
+                    hi
+                    </td> 
+                </tr>
+
+                </table>
+        </div>`);
+        document.body.append(tooltip_template);
+        
+
+        // add eventlistener for input field
+        document.getElementsByName("filter")[0].addEventListener('change', updateTextField);
+        document.getElementsByName("date-start")[0].addEventListener('change', updateStartField);
+        document.getElementsByName("date-end")[0].addEventListener('change', updateEndField);
+        document.getElementsByName("MinSent")[0].addEventListener('change', updateMinSent);
+        document.getElementsByName("MaxSent")[0].addEventListener('change', updateMaxSent);
+        document.getElementsByName("reset")[0].addEventListener('click', resetVisibility);
+
+        let $tooltip = document.querySelector('#tooltip');
+        let $point_tip = document.querySelector('#point_tip');
+        let $group_tip = document.querySelector('#group_tip');
+        let $median_sentiment = document.querySelector('#median_sentiment');
+        let $mean_sentiment = document.querySelector('#mean_sentiment');
+        let $number_of_tweets = document.querySelector('#number_of_tweets');
+        let $hashtags = document.querySelector('#htags');
+        let $dates = document.querySelector('#date');
+     //   let $date_display = document.querySelector('#info');
+        let color_array = [
+            "#1f78b4",
+            "#b2df8a",
+            "#33a02c",
+            "#fb9a99",
+            "#e31a1c",
+            "#fdbf6f",
+            "#ff7f00",
+            "#6a3d9a",
+            "#cab2d6",
+            "#ffff99"
+            ]
+
+
+        initScene();
+        // GeoObject creation based on http://www.smartjava.org/content/render-geographic-information-3d-threejs-and-d3js/
+        addGeoObject();
+        addMessageObject();
+        animate();
+        
+        const ctx = document.getElementById('chart1').getContext('2d');
+        const chart1 = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+            label: 'Sentiment Distribution',
+            data: [],
+            pointRadius: 0,
+            backgroundColor: [
+                'red',
+                'green',
+                'blue'
+            ],
+            borderColor: [
+                'red',
+                'green',
+                'blue'
+            ],
+            borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+            yAxes: [{
+                ticks: {
+                beginAtZero: true
+                }
+            }]
+            },
+            drawTicks : false
+        }
+        });
+
+        const ctx2 = document.getElementById('chart2').getContext('2d');
+        const chart2 = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+            label: 'Hashtag Distribution',
+            data: [],
+            pointRadius: 0,
+            backgroundColor: [
+                'red',
+                'green',
+                'blue',
+                'yellow',
+                'pink',
+                'blue', 'white', 'black', 'IndianRed', 'GreenYellow', 'NavajoWhite', 'Chocolate', 'Brown', 'Maroon', 'Olive', 'Snow', 
+                'Coral', 'OrangeRed', 'LightSalmon', 'Tomato', 'Gold', 'Teal', 'Aqua', 'AliceBlue', 'Tan', 'Plum',
+                 'DarkViolet', 'Ivory' ,'DarkOrchid'
+            ],
+            borderColor: [
+                'red',
+                'green',
+                'blue'
+            ],
+            borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+            yAxes: [{
+                ticks: {
+                beginAtZero: true
+                }
+            }]
+            },
+            drawTicks : false
+        }
+        });
+        updatePlots()
+
+        function initScene() {
+
+          //  $date_display.innerText = "DATE:"+"  " + dateList[currentDate];
+            // set the scene size
+            var WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
+
+            let viz_width = WIDTH;
+
+            // set some camera attributes
+            var VIEW_ANGLE = 50, ASPECT = WIDTH / HEIGHT, NEAR = 1, FAR = 500000;
+
+            // create a WebGL renderer, camera, and a scene
+            renderer = new THREE.WebGLRenderer({antialias:true});
+            camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT,
+                                                  NEAR, FAR);
+            scene = new THREE.Scene();
+
+            // add and position the camera at a fixed position
+            camera.name = "CAM"
+            scene.add(camera);
+            camera.position.x = 0;
+            camera.position.y = 9455 + 15000;
+            camera.position.z = 900;
+            camera.lookAt( scene.position );
+
+
+            // Add Background Mesh for MAP
+            const texture = new THREE.TextureLoader().load( 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/BlankMap-USA-states.PNG/800px-BlankMap-USA-states.PNG' );
+            const geometry = new THREE.BoxGeometry( 1513*9, 200, 983*9 );
+            const material = new THREE.MeshBasicMaterial( { map: texture } );
+
+            var mesh = new THREE.Mesh( geometry, material );
+            mesh.position.y -= 350
+            mesh.name = "MAP"
+            scene.add( mesh );
+            // start the renderer, and black background
+            renderer.setSize(WIDTH, HEIGHT);
+            renderer.setClearColor(0x000000);
+
+            // add the render target to the page
+            $("#chart").append(renderer.domElement);
+
+            directLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            directLight.name = "MAP"
+            scene.add(directLight);
+
+            // add a base plane on which we'll render our map
+            var planeGeo = new THREE.PlaneGeometry(10000, 10000, 10, 10);
+            var planeMat = new THREE.MeshLambertMaterial({color: 0xffffff});
+            var plane = new THREE.Mesh(planeGeo, planeMat);
+            
+            controls = new MapControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+			controls.dampingFactor = 0.05;
+
+			controls.screenSpacePanning = false;
+
+			controls.minDistance = 5000;
+			controls.maxDistance = 49000;
+
+			controls.maxPolarAngle = Math.PI / 2.5;
+
+            var renderModel = new RenderPass(scene, camera);
+
+            composer = new EffectComposer(renderer);
+            composer.setSize(WIDTH, HEIGHT);
+            composer.addPass(renderModel);
+            outlinePass = new OutlinePass( new THREE.Vector2( window.innerWidth, window.innerHeight ), scene, camera );
+			composer.addPass( outlinePass );
+            permanentOutlinePass = new OutlinePass( new THREE.Vector2( window.innerWidth, window.innerHeight ), scene, camera );
+            permanentOutlinePass.edgeStrength = 10;
+            permanentOutlinePass.edgeThickness = 1;
+            permanentOutlinePass.visibleEdgeColor.set(0xf0f0f0);
+            permanentOutlinePass.hiddenEdgeColor.set(permanentOutlinePass.visibleEdgeColor);
+            composer.addPass(permanentOutlinePass);
+            renderer.domElement.style.touchAction = 'none';
+            renderer.domElement.addEventListener( 'pointermove', onPointerMove, false );
+            renderer.domElement.addEventListener( 'pointerdown', onPointerDown, false );
+
+        }
+
+        function animate()
+        {
+            requestAnimationFrame(animate);
+            render();
+        }
+        
+
+        function render()
+        {
+
+            var delta = clock.getDelta();
+                TWEEN.update();
+                controls.update(delta);
+                renderer.render(scene, camera);
+                composer.render(delta);
+                document.body.appendChild(renderer.domElement);
+        }
+
+
+
+        function print(x)
+        {
+            console.log(x);
+        }
+
+
+      // add the loaded gis object (in geojson format) to the map
+      function addGeoObject() {
+          // keep track of rendered objects
+          var meshes = [];
+          // and their data
+          var messages = []
+
+          // convert to mesh and calculate values
+          for (var key in data.features) {
+              var geoFeature = data.features[key].geometry
+              var feature = geo.path(geoFeature);
+
+              // we only need to convert it to a three.js path
+              var mesh = transformSVGPathExposed(feature);
+             // add to array
+              meshes.push(mesh);
+              messages.push(data.features[key].messages)
+
+          }
+
+          // we've got our paths now extrude them to a height and add a color
+          for (var i = 1 ; i < meshes.length ; i++) {
+
+              // create material color based on average
+              var material = new THREE.MeshToonMaterial({
+              });
+
+            // create extrude based on total
+            var extrude = 1;    
+            var extrudeSettings = 
+            {
+                steps: 1,
+                depth: 1,
+                bevelEnabled: false,
+                bevelThickness: 1,
+                bevelSize: 1,
+                bevelOffset: 1,
+                bevelSegments: 1
+            };
+              var geometry = new THREE.ExtrudeGeometry(meshes[i], extrudeSettings)
+
+              // create a mesh based on material and extruded shape
+              var toAdd = new THREE.Mesh(geometry, material);
+              toAdd.userData.messages = messages[i]
+
+              // this attribute tells Tween whether or not a animation is running
+              toAdd.userData.isTweening = false;
+              toAdd.rotateX(Math.PI/2);              
+            // add to scene
+            //  scene.add(toAdd);
+              allObjects.push(toAdd);
+            }
+          permanentOutlinePass.selectedObjects = allObjects;
+
+      }
+
+
+      // add the loaded gis object (in geojson format) to the map
+      function addMessageObject() {
+          // keep track of rendered objects
+          var messageMeshes = [];
+          var stateMap ={
+                "New Jersey" : [0, 0, 0],
+                "Washington" : [-5400, 0, -3500],
+                "Oregon" : [-5400, 0, -2300],
+                "California" : [-5800, 0, -600],
+                "Nevada" : [-4888, 0, -600],
+                "Idaho" : [-4088, 0, -1900],
+                "Alaska" : [-5500, 0, 3300],
+                "Arizona" : [-4300, 0, 1300],
+                "Utah" : [-3300, 0, -300],
+                "Wyoming" : [-2300, 0, -1500],
+                "Montana" : [-2300, 0, -3300],
+                "Colorado" : [-2300, 0, -500],
+                "New Mexico" : [-2300, 0, 1500],
+                "Texas" : [-1000, 0, 1900],
+                "Hawaii" : [-2100, 0, 3900],
+                "Oklahoma" : [-500, 0, 900],
+                "Kansas" : [-500, 0, 0],
+                "Nebraska" : [-250, 0, -700],
+                "South Dakota" : [-550, 0, -1700],
+                "North Dakota" : [-400, 0, -2700],
+                "Minnesota" : [500, 0, -2200],
+                "Wisonsin" : [1500, 0, -2000],
+                "Iowa" : [500, 0, -1200],
+                "Missouri" : [900, 0, -200],
+                "Arkansas" : [900, 0, 1200],
+                "Louisiana" : [940, 0, 2200],
+                "Mississippi" : [1940, 0, 2200],
+                "Tennessee" : [2040, 0, 1000],
+                "Illinois" : [1700, 0, -800],
+                "Wisonsin" : [1700, 0, -1800],
+                "Michigan" : [2600, 0, -1800],
+                "Indiana" : [2600, 0, -600],
+                "Kentucky" : [2240, 0, 400],
+                "Ohio" : [3200, 0, -700],
+                "Pennsylvania" : [4200, 0, -1200],
+                "New York" : [4850, 0, -1900],
+                "Alabama" : [2440, 0, 1300],
+                "Georgia" : [3440, 0, 1800],
+                "Florida" : [3940, 0, 2800],
+                "South Carolina" : [3840, 0, 1000],
+                "North Carolina" : [4240, 0, 600],
+                "Virginia" : [4240, 0, 0],
+                "West Virginia" : [4040, 0, -250],
+                "Maryland" : [4850, 0, -1900],
+                "Delaware" : [4850, 0, -1900],
+                "New Jersey" : [4850, 0, -1900],
+                "Connecticut" : [4850, 0, -1900],
+                "Rhode Island" : [4850, 0, -1900],
+                "Massachusetts" : [4850, 0, -1900],
+                "Vermont" : [4850, 0, -1900],
+                "New Hampshire" : [4850, 0, -1900],
+                "Maine" : [5900, 0, -2900],
+                "District of Columbia" : [4850, 0, -1900],
+                "Wisconsin" : [4850, 0, -1900],
+                "Puerto Rico" : [4850, 0, -1900]
+            }
+          // we've got our paths now extrude them to a height and add a color
+          for (var i = 1 ; i < allObjects.length ; i++) {
+             
+            var geoObject = allObjects[i]
+            var userData = geoObject.userData
+            var offsetOnZ = randomNumber(0, 7000)
+
+            for(var currentMessage in userData["messages"]){
+                var info=userData["messages"][currentMessage]
+                
+                var green = info.sentiment
+                var red = 1-info.sentiment
+                var color = new THREE.Color(red, green, 0)
+
+                // create material color based on average
+                var material = new THREE.MeshToonMaterial({
+                    color: color
+                });
+
+                var geometry = new THREE.BoxGeometry( 100, 100, 100);
+                
+   
+                // create a mesh based on material and extruded shape
+                var toAdd = new THREE.Mesh(geometry, material);
+                toAdd.position.set(stateMap[info.state][0], currentMessage*75 +50*currentMessage, stateMap[info.state][2])
+
+                // this attribute tells Tween whether or not a animation is running
+                toAdd.userData.isTweening = false; 
+                toAdd.userData.kind = "message";   
+                toAdd.userData.id = userData["messages"][currentMessage].id;
+                toAdd.userData.isReply = userData["messages"][currentMessage].isReply;
+                toAdd.userData.replyTo = userData["messages"][currentMessage].replyTo;
+                toAdd.userData.message = userData["messages"][currentMessage].message;
+                toAdd.userData.name = userData["messages"][currentMessage].name;
+                toAdd.userData.state = userData["messages"][currentMessage].state;
+                toAdd.userData.sentiment = userData["messages"][currentMessage].sentiment;
+                toAdd.userData.hashtags = userData["messages"][currentMessage].hashtags;
+                toAdd.userData.date = userData["messages"][currentMessage].date;
+                totalMessages.push(toAdd)
+                // add to scene
+                scene.add(toAdd);
+            }
+            
+            }
+
+      }
+
+    // Function to generate random number 
+    function randomNumber(min, max) { 
+        return Math.random() * (max - min) + min;
+        }   
+
+
+    // call this function to resize all meshes according to the date
+    function rescaleAll(date, objects) {
+    for (var i = 0 ; i < data.features[dateList[currentDate]].length ; i++) {
+        var geoFeature = data.features[dateList[currentDate]][i];
+        var value = geoFeature.properties.number_of_tweets ;
+        var updated_sentiment = geoFeature.properties.median_sentiment;
+        updated_sentiment = Math.random();
+        var update_in_percent = updated_sentiment * 100;
+        var new_color = perc2color(update_in_percent);
+        
+        //  value = geoFeature.properties.number_of_tweets;
+        //   value = Math.floor(Math.random() * 100) + 1  
+        var mesh = allObjects[i];
+        var tweenScale = new createjs.Tween(mesh.scale).to({
+            x : mesh.scale.x,
+            y : mesh.scale.y ,
+            z : 10 * value
+        }, 1);
+        var tweenMove = new createjs.Tween(mesh.position).to({
+            x : mesh.position.x,
+            y : 10*value,
+            z : mesh.position.z 
+        }, 1);
+
+        tweenScale.play(tweenScale);
+        tweenMove.play(tweenMove);
+
+    }
+    }
+
+
+      function onPointerMove( event ) {
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+            var orig_mouse = [event.clientX, event.clientY]          
+            checkIntersectionMove(mouse, orig_mouse);
+            if ( event.isPrimary === false ) return;
+        }
+
+        function onPointerDown(event){
+            if(event.isPrimary == false) return;
+            switch(event.button){
+                case 0:
+                    
+                    hideTooltip();
+          //          clearSelection();
+                    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+                    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+                    var orig_mouse = [event.clientX, event.clientY]
+                    checkIntersection(mouse, orig_mouse);
+                    break;
+                case 1:
+                    clearNetwork();
+                    hideTooltip();
+                    clearSelection();
+                    break;
+            }
+        }
+
+        function clearNetwork(){
+            var parent = document.getElementById('scroller')
+            while(parent.firstChild){
+                parent.removeChild(parent.firstChild)
+            }
+            for(var line in currentNetwork){
+                scene.remove(currentNetwork[line])
+            }
+            currentNetwork = []
+        }
+
+
+
+        function clearSelection()
+        {
+            selectedObjects.length = 0;
+            outlinePass.selectedObjects.length = 0;
+        }
+
+
+
+
+        function checkIntersectionMove(mousePos, original) {
+
+            raycaster.setFromCamera( mouse, camera );
+
+            var intersects = raycaster.intersectObject( scene, true );
+
+            if ( intersects.length > 0 ) {
+
+                var selectedObject = intersects[ 0 ].object;
+               
+                if (selectedObject.name == "MAP"){
+                    return
+                }
+                else{
+                    if(selectedObject.visible == true)
+                        ShowTooltip(mousePos, selectedObject.userData, original);
+                }
+                
+
+
+            } else {
+
+                // outlinePass.selectedObjects = [];
+            }
+        }
+
+
+      function checkIntersection(mousePos, original) {
+
+            raycaster.setFromCamera( mouse, camera );
+
+            var intersects = raycaster.intersectObject( scene, true );
+            if ( intersects.length > 0 ) {
+
+                var selectedObject = intersects[ 0 ].object;            
+                try{
+                     if (selectedObject.name == "MAP"){
+                            return
+                        }
+                    }
+                    catch (TypeError){
+
+                    }
+
+                if(outlinePass.selectedObjects.length)
+                {
+                    if(selectedObject.visible == true){
+                        BuildNetwork(selectedObject, 0);
+                        outlinePass.selectedObjects.push(selectedObject);
+                        ShowTooltip(mousePos, selectedObject.userData, original);
+                    }
+
+                }
+                else{
+                    var selection = [];
+                    selection.push(selectedObject);
+                    outlinePass.selectedObjects = selection;
+                }
+
+            } else {
+
+                // outlinePass.selectedObjects = [];
+            }
+        }
+
+        function BuildNetwork(node, depth){
+            print(node)
+            if(node.visible == false){
+                node.visible = true
+            }
+            ListTooltip(node.userData, depth)
+            if(node.userData.isReply){
+                var searchFor = node.userData.replyTo
+                var searching = null
+                
+                for(var message in totalMessages){
+                    if(totalMessages[message].userData.id==searchFor){
+                        searching = totalMessages[message]
+                        break
+                    }
+                }
+                if(searching==null){
+                    return
+                }
+                var material = new THREE.LineBasicMaterial({
+                    color: 0xff0000,
+                    linewidth:12
+                });
+
+                var points = []
+                points.push(new THREE.Vector3(node.position.x, node.position.y, node.position.z))
+                points.push(new THREE.Vector3(searching.position.x, searching.position.y, searching.position.z))
+
+                var distance = new THREE.Vector3(node.position.x, node.position.y, node.position.z).distanceTo(new THREE.Vector3(searching.position.x, searching.position.y, searching.position.z))
+                var dir = new THREE.Vector3();
+                var direction = dir.subVectors( new THREE.Vector3(searching.position.x, searching.position.y, searching.position.z), new THREE.Vector3(node.position.x, node.position.y, node.position.z) ).normalize();
+                const geometry = new THREE.BufferGeometry().setFromPoints( points );
+                // create arrowhelper
+                var arrowHelper = new THREE.ArrowHelper(direction, new THREE.Vector3(node.position.x, node.position.y, node.position.z), distance, 0xff0000, 0.98*distance, 0.05*distance );
+                var green = node.userData.sentiment
+                var red = 1-node.userData.sentiment
+                arrowHelper.setColor(new THREE.Color(red, green, 0));
+                arrowHelper.name = "MAP"
+                scene.add(arrowHelper)
+                currentNetwork.push(arrowHelper)
+                var img=document.createElement("img");
+                img.src="images/arrow.png"
+                document.getElementById('scroller').appendChild(img); 
+                addSelectedObject(arrowHelper)
+                addSelectedObject(searching)
+                
+                BuildNetwork(searching, depth+1)
+        }}
+
+
+        function updateMinSent(){
+            for(var child in scene.children){
+                    if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                        if(scene.children[child].userData["sentiment"] < this.value){
+                            scene.children[child].visible = false
+                        }
+                    }
+                } 
+                updatePlots();
+        }
+
+        function updateMaxSent(){
+            for(var child in scene.children){
+                    if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                        scene.children[child].userData
+                        if(scene.children[child].userData["sentiment"] > this.value){
+                            scene.children[child].visible = false
+                        }
+
+                    }
+                } 
+                updatePlots();
+        }
+
+        function updateStartField(){
+            for(var child in scene.children){
+                        if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                            if(scene.children[child].userData["date"] < this.value){
+                                scene.children[child].visible = false
+                            }
+                    }
+                } 
+                updatePlots();
+        }
+
+        function updateEndField(){
+            for(var child in scene.children){
+                        if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                            if(scene.children[child].userData["date"] > this.value){
+                                scene.children[child].visible = false
+                            }
+                    }
+                } 
+                updatePlots();
+        }
+
+
+        function resetVisibility(){
+            document.getElementsByName("filter")[0].value = document.getElementsByName("filter")[0].defaultValue;
+            document.getElementsByName("date-start")[0].value = document.getElementsByName("date-start")[0].defaultValue;
+            document.getElementsByName("date-end")[0].value = document.getElementsByName("date-end")[0].defaultValue;
+            document.getElementsByName("MinSent")[0].value = document.getElementsByName("MinSent")[0].defaultValue;
+            document.getElementsByName("MaxSent")[0].value = document.getElementsByName("MaxSent")[0].defaultValue;
+            for(var child in scene.children){
+                scene.children[child].visible = true
+            }
+            updatePlots();
+        }
+
+        function updatePlots(){
+            var dataset = []
+            for(var child in scene.children){
+                if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                    if(scene.children[child].visible == true){
+                        dataset.push(scene.children[child])
+                    }
+                }
+            }
+            chart1.data.datasets[0].data = []
+            var chart1data = []
+            var chart1datalabel = []
+            for(var ind in dataset){
+                if(typeof(dataset[ind].userData.sentiment) == "number"){
+                    chart1data.push(dataset[ind].userData.sentiment)
+                }
+            }
+            chart1data.sort(function(a, b) {
+                return a - b;
+                });
+            for(var ind in chart1data){
+                chart1datalabel.push(ind)
+            }
+            chart1.data.datasets[0].data = chart1data
+            chart1.data.labels = chart1datalabel
+            chart1.update()
+
+            chart2.data.datasets[0].data = []
+            var chart2data = []
+            var chart2datalabel = []         
+            chart2.data.labels = []
+
+            for(var ind in dataset){
+                for(var tag in dataset[ind].userData.hashtags){
+                    chart2data.push(dataset[ind].userData.hashtags[tag])
+                }
+            }
+            var report = {};
+
+            chart2data.forEach(function(el){
+            report[el] = report[el] + 1 || 1;
+            });
+            
+            chart2.data.labels = Object.keys(report)
+            chart2.data.datasets[0].data = Object.values(report)
+
+            chart2.update()
+
+        }
+
+        function updateTextField(){
+            camera.name = "CAM"
+            if(this.value.includes("&")){
+                var str = this.value.replace(/\s/g, "");
+                var split = str.split("&")
+                for(var child in scene.children){
+                        if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                            if(!split.every(r => scene.children[child].userData.hashtags.includes(r))){
+                                scene.children[child].visible = false
+                               // BuildNetwork(scene.children[child], 0)                        
+                        }
+                    }
+                }    
+            }
+            else if(this.value.includes("|")){
+                var str = this.value.replace(/\s/g, "");
+                var split = str.split("|")
+                for(var child in scene.children){
+                        if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                            const filteredArray = scene.children[child].userData.hashtags.filter(value => split.includes(value));
+                            if(!filteredArray.length == 1){
+                                scene.children[child].visible = false
+                               // BuildNetwork(scene.children[child], 0)                        
+                        }
+                    }
+                } 
+            }
+            else if(this.value.includes(",")){
+                var str = this.value.replace(/\s/g, "");
+                var split = str.split(",")
+                for(var child in scene.children){
+                        if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                            for(var s in split){
+                            if(!scene.children[child].userData.hashtags.includes(split[s])){
+                                // addSelectedObject(scene.children[child])
+                                scene.children[child].visible = false
+                              //  BuildNetwork(scene.children[child], 0)
+                            }
+                        }                     
+                        }
+                    }
+                } 
+            else{
+                for(var child in scene.children){
+                    if(scene.children[child].name != "MAP" & scene.children[child].name != "CAM"){
+                        if(!scene.children[child].userData.hashtags.includes(this.value)){
+                            scene.children[child].visible = false
+                        // addSelectedObject(scene.children[child])
+                         //   BuildNetwork(scene.children[child], 0)
+                        }
+                    }     
+                }
+            }
+            updatePlots();
+        }
+
+
+        function ShowTooltip(mousePos, data, origin)
+        {
+            let correctPosition = mouseToThree(mousePos.x, mousePos.y);
+            var tooltipWidth = 120;
+            var x_offset = WIDTH/2;
+            var y_offset = -437;
+            tooltip_state.display = "block";
+            tooltip_state.left = mouse.x * (WIDTH/2) + x_offset;
+
+            tooltip_state.top =  mouse.y * (WIDTH/4) + y_offset;
+            try{
+                print(data);
+                tooltip_state.name = data.id;
+                tooltip_state.median_sent = data.message
+                tooltip_state.mean_sent = data.state+ 'px';
+                tooltip_state.no_of_tweets = data.number_of_tweets;
+                tooltip_state.hashtags = data.hashtags;
+                tooltip_state.date = data.date
+            }
+            catch{
+                
+            }
+
+
+            var contextMenuString = `
+            <div id="context" class="context">
+                    <button id="hide">Show Message Chain</button>
+                    <button id="show">Show all replies</button>
+            </div>`
+          //  document.body.appendChild(createElementFromHTML(contextMenuString)); 
+           // let $context = document.querySelector('#context');
+          //  $context.style.top =origin[1] + 'px';
+           // $context.style.left =origin[0] + 'px';
+            
+
+
+            updateTooltip();
+        }
+
+        function ListTooltip(data, depth)
+        {
+            var messageText = data.message;
+            var messageName = data.id;
+            var messageLocation = data.state;
+            var string = `<div class="scrollElement">
+            <div style="padding: 2px; margin-bottom: 2px; font-weight: 600;border:2px solid black;
+             font-size: large; background: rgba(95,117,142,1);border-radius:15px;">
+             ${messageName}
+             </div>
+            <table class="scrollElementTable">          
+               <tr>
+                   <td>
+                       Message:
+                   </td>
+                   <td id="median_sentiment">
+                   ${messageText}
+                   </td> 
+               </tr>
+               <tr>
+                   <td>
+                       State:
+                   </td>
+                   <td id="mean_sentiment">
+                    ${messageLocation}
+                   </td> 
+               </tr>
+               <tr>
+                   <td>
+                       Estimated  Sentiment of Message (Positive or Negative):
+                   </td>
+                   <td id="mean_sentiment">
+                    ${Evaluate_Sentiment_Range(data.sentiment)}
+                   </td> 
+               </tr>
+               <tr>
+                   <td>
+                       Date:
+                   </td>
+                   <td id="mean_sentiment">
+                    TBA
+                   </td> 
+               </tr>
+               <tr>
+                   <td>
+                       Hashtags:
+                   </td>
+                   <td id="htags">
+                    ${data.hashtags}
+                   </td> 
+               </tr>
+               </table>
+            </div>`
+            var element = createElementFromHTML(string)
+            document.getElementById('scroller').appendChild(element);
+        }
+
+        function mouseToThree(mouseX, mouseY) {
+            return new THREE.Vector3(
+               -( mouseX/ window.innerWidth ) * 2 - 1,
+                    -( mouseY / window.innerHeight ) * 2 + 1,
+                1
+            );
+            }
+
+
+        function updateTooltip() {
+            var table = document.getElementById("pointerTable");
+   
+            $tooltip.style.display = tooltip_state.display;
+            $tooltip.style.left = tooltip_state.left + 'px';
+            $tooltip.style.top = -tooltip_state.top + 'px';
+            $point_tip.innerText = tooltip_state.name;
+
+            var med_state = tooltip_state.median_sent;
+            var mean_state = tooltip_state.mean_sent;
+
+
+            $median_sentiment.innerText = med_state;
+            $mean_sentiment.innerText = mean_state;    
+            $hashtags.innerText = tooltip_state.hashtags
+            $dates.innerText = tooltip_state.date
+        }
+
+
+        function Evaluate_Sentiment_Range(sentiment_value){
+            var evaluation = "ERROR VALUE";
+            sentiment_value = sentiment_value*100
+            if(sentiment_value < 10){
+                evaluation = "VERY NEGATIVE";
+            } 
+            else if (40 > sentiment_value && sentiment_value > 10) {
+                evaluation = "NEGATIVE"
+            }
+            else if (40 < sentiment_value && sentiment_value < 60) {
+                evaluation = "NEUTRAL"
+            }
+            else if (80 > sentiment_value && sentiment_value > 60) {
+                evaluation = "POSITIVE"
+            }
+            else if (80 < sentiment_value ) {
+                evaluation = " VERY POSITIVE"
+            }
+
+            return evaluation;
+        }
+
+        function hideTooltip() {
+            tooltip_state.display = "none";
+            updateTooltip();
+        }
+
+
+
+        function addSelectedObject(obj)
+        {
+            selectedObjects.push(obj);
+            outlinePass.selectedObjects = selectedObjects;
+        }
+
+
+      function uniq_fast(a) {
+            var seen = {};
+            var out = [];
+            var len = a.length;
+            var j = 0;
+            for(var i = 0; i < len; i++) {
+                var item = a[i];
+                if(seen[item] !== 1) {
+                    seen[item] = 1;
+                    out[j++] = item;
+                }
+            }
+            return out;
+        }
+
+        // simple gradient function
+        function gradient(length, maxLength) {
+
+            var i = (length * 255 / maxLength);
+            var r = i;
+            var g = 255-(i);
+            var b = 0;
+
+            var rgb = b | (g << 8) | (r << 16);
+            return rgb;
+        }
+
+    });
+
+// taken from https://gist.github.com/mlocati/7210513
+    function perc2color(perc) {
+	var r, g, b = 0;
+	if(perc < 50) {
+		r = 255;
+		g = Math.round(5.1 * perc);
+	}
+	else {
+		g = 255;
+		r = Math.round(510 - 5.10 * perc);
+	}
+	var h = r * 0x10000 + g * 0x100 + b * 0x1;
+	return '#' + ('000000' + h.toString(16)).slice(-6);
+}
+
+
+function createElementFromHTML(htmlString) 
+    {
+        var div = document.createElement('div');
+        div.innerHTML = htmlString.trim();
+
+        // Change this to div.childNodes to support multiple top-level nodes
+        return div.firstChild; 
+    }
+
+
+    </script>
+
+
+</body>
+</html>
