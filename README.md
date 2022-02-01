@@ -12,7 +12,7 @@ The main application needs to be run through an webserver. We recomend using IDE
 
 
 ### Preprocessing pipeline
-Since this project has been under development for ~2 years there have been changes to the Twitter API since the start of it. This means that the origian data sourcing cannot be reproduced sadly. Data which has been run through the pipeline can be found [here](code/application/data/dummy/real.json).
+Since this project has been under development for ~2 years there have been changes to the Twitter API since the start of it. This means that the origian data sourcing cannot be reproduced sadly. Data which has been run through the pipeline can be found [here](code/application/data/dummy/real.json). (Folder structure has not been renamed since the switch from dummy data to real data.)
 
 ## How to use the software
 ### Controls
