@@ -7,11 +7,11 @@ The project consists of two main parts:
 1. The main application which can be found [here](code/application/index.html)
 2. The preprocessing pipeline which can be found [here](code/preprocess)
 
-## Main application
+### Main application
 The main application needs to be run through an webserver. We recomend using IDE plugins like [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) or npm packages like [http-server](https://www.npmjs.com/package/http-server). Just start the webserver in the same folder as the index.html and navigate a browser like Google Chrome or Firefox to the corresponding localhost adress.
 
 
-## Preprocessing pipeline
+### Preprocessing pipeline
 Since this project has been under development for ~2 years there have been changes to the Twitter API since the start of it. This means that the origian data sourcing cannot be reproduced sadly. Data which has been run through the pipeline can be found [here](code/application/data/dummy/real.json).
 
 ## How to use the software
