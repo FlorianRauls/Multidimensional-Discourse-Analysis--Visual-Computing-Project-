@@ -1,0 +1,191 @@
+\documentclass[11pt]{mimosis}
+% \PassOptionsToClass{14pt}{scrbook}
+\usepackage{metalogo}
+
+\usepackage{textcomp}
+\usepackage{gensymb}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Some of my favorite personal adjustments
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% These are the adjustments that I consider necessary for typesetting
+% a nice thesis. However, they are *not* included in the template, as
+% I do not want to force you to use them.
+
+% This ensures that I am able to typeset bold font in table while still aligning the numbers
+% correctly.
+\usepackage{etoolbox}
+
+\usepackage[binary-units=true]{siunitx}
+\DeclareSIUnit\px{px}
+
+\sisetup{%
+  detect-all           = true,
+  detect-family        = true,
+  detect-mode          = true,
+  detect-shape         = true,
+  detect-weight        = true,
+  detect-inline-weight = math,
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Hyperlinks & bookmarks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[%
+  colorlinks = true,
+  citecolor  = Black,
+  linkcolor  = Black,
+  urlcolor   = Black,
+  ]{hyperref}
+
+\usepackage{bookmark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Bibliography
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% I like the bibliography to be extremely plain, showing only a numeric
+% identifier and citing everything in simple brackets. The first names,
+% if present, will be initialized. DOIs and URLs will be preserved.
+
+\usepackage[%
+  autocite     = plain,
+  backend      = bibtex,
+  doi          = true,
+  url          = true,
+  giveninits   = true,
+  hyperref     = true,
+  maxbibnames  = 99,
+  maxcitenames = 99,
+  sortcites    = true,
+  style        = alphabetic,
+  citestyle    = alphabetic,
+  backref      = true,
+  ]{biblatex}
+
+
+\input{bibliography-mimosis}
+\bibliography{Thesis}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fonts
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\ifxetexorluatex
+  %\setmainfont{Minion Pro}
+  \usepackage{microtype}
+\else
+  %\usepackage[osf,lining]{ebgaramond}  
+  \usepackage[scale=0.7]{sourcecodepro}  
+\fi
+
+
+
+
+
+
+\usepackage{mathpazo}
+\usepackage{lettrine}
+
+\usepackage{makeidx}
+\makeindex
+
+
+
+\newacronym[description={Principal component analysis}]{PCA}{PCA}{principal component analysis}
+\newacronym                                            {SNF}{SNF}{Smith normal form}
+\newacronym[description={Topological data analysis}]   {TDA}{TDA}{topological data analysis}
+
+%\makeindex
+\makeglossaries
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Incipit
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand*{\titleGP}{\begingroup % Create the command for including the title page in the document
+\centering % Center all text
+\vspace*{\baselineskip} % White space at the top of the page
+
+%\rule{\textwidth}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal line
+%\rule{\textwidth}{0.4pt}\\[1.0\baselineskip] % Thin horizontal line
+
+{\huge A Novel Tool for Multidimensional Online Discourse Visualization}\\[0.2\baselineskip] % Title
+
+%\rule{\textwidth}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal line
+%\rule{\textwidth}{1.6pt}\\ % Thick horizontal line
+
+\vspace*{\baselineskip}
+
+{\Large Advanced Practical\\[\baselineskip]} % Tagline(s) or further description
+\vspace*{\baselineskip}
+
+{\LARGE Rauls Florian\\[\baselineskip]} % Editor list  
+
+\vspace*{\baselineskip} % Whitespace between location/year and editors
+
+Supervisor\\
+{\large  Prof. Dr. Filip Sadlo\\[\baselineskip]} % Editor list
+
+\vfil
+
+Heidelberg,  \today \par % Location and year
+
+\vspace*{\baselineskip}
+
+{\itshape Faculty of Mathematics and Computer Science\par} % Editor affiliation
+{\itshape Heidelberg University\par} % Editor affiliation
+
+\endgroup}
+
+ 
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{siunitx}
+
+\usepackage{blindtext}
+
+\usepackage{algorithm2e}
+
+% Corrects \autoref{}: chapter -> Chapter, section -> Section, subsection -> Section
+\addto\extrasenglish{%
+  \renewcommand{\chapterautorefname}{Chapter}%
+  \renewcommand{\sectionautorefname}{Section}%
+  \renewcommand{\subsectionautorefname}{Section}%
+}
+
+\begin{document}
+
+\frontmatter
+\thispagestyle{empty}
+  \titleGP  
+  \cleardoublepage
+  \pagestyle{empty}
+  %\include{Sources/DeclarationOfAuthorship}
+  \include{Sources/Abstract}
+  \tableofcontents
+
+\mainmatter
+  \pagestyle{scrheadings}
+
+  \include{Sources/Introduction}
+  \include{Sources/RelatedWork}
+  \include{Sources/Method}
+  \include{Sources/Implementation}
+  \include{Sources/Results}
+  \include{Sources/Conclusion}  
+
+% This ensures that the subsequent sections are being included as root
+% items in the bookmark structure of your PDF reader.
+\bookmarksetup{startatroot} 
+\backmatter
+
+  \printindex
+  \label{sec:index}
+  
+  \printbibliography
+  
+\end{document}

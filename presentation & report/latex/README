@@ -1,0 +1,2 @@
+For quick updates use pdflatex -> bibtex -> pdflatex -> pdflatex
+For "higher quality" use lualatex -> bibtex -> lualatex -> lualatex (note: uses Minion Pro Regular as font)

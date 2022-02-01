@@ -1,0 +1,13 @@
+\chapter{Implementation}
+\label{imp}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Tools}
+To ensure cross-platform accessibility and ease-of-use, we chose to implement our demo in JavaScript for the usage in internet browsers. Not only can our demo be viewed under any operating system, but also through each device, which is able to use a browser software.
+
+As a 3D-rendering tool, we went with the library three.js\footnote{\url{https://threejs.org/}}. For the display of statistics in graphs, we used chart.js\footnote{\url{https://www.chartjs.org/}}. Implementations through different technologies, programming languages and libraries, for different use-cases are also viable. If one wants to achieve faster real-time visualizations on bigger datasets, we recommend using C++ and rendering the visualization via \textit{OpenGL} and \textit{cpplot} for the creation of dynamic graphs.
+\section{Technical Limits}
+When implementing our visualization, we were faced with some technical issues, which we were not able to solve directly through optimization and which future research should aim to resolve. Firstly was the amount of RAM, which our method needs to function. This does mostly stem from the usage of Geo-JSON, but also from the other information, which we save, since we load the whole of the data into RAM directly. Often times this can lead to \emph{out-of-memory}-errors. Since we only want to show a demo of how our software could work, we resolved this by only using a limited amount of messages, to visualize at a time. A more sophisticated solution could entail the streaming of the data in a limited capacity at a time. This would reduce RAM usage, whilst still allowing to visualize a larger amount of data points. 
+
+Further limitations arise from the Twitter-API itself. Even though it features a lot of great features and built-in support, it only allows the collection of a limited \emph{tweets} per hour. Since there is no real workaround for this issue, we recommend planning in a longer collection-period for messages.
+
+The last major issue stems from the amount of messages, which can rendered meaningfully at a time. Because our tool should allow users to acquire an easily understandable overview of conversations, rendering every single message could be counterproductive, since it would lead to an overload of displayed information. As a further improvement, we propose the bulking of similar messages, which were posted in the same state, at roughly the same time period. Possible metrics for such a process could be based on the usage of same or similar \emph{hashtags}, or on methods from the area of Text Similarity.
